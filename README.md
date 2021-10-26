@@ -1,24 +1,10 @@
-# README
+# Callnumber browse proof-of-concept
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+This is a simple Rails app as a PoC of callnumber browse.
 
-Things you may want to cover:
+To try it out:
 
-* Ruby version
-
-* System dependencies
-
-* Configuration
-
-* Database creation
-
-* Database initialization
-
-* How to run the test suite
-
-* Services (job queues, cache servers, search engines, etc.)
-
-* Deployment instructions
-
-* ...
+* Make sure you're on the library VPN, since it talks to search-prep
+* Clone this repo and `bundle install`
+* `rails server` to fire it up
+* ...and go to the URL

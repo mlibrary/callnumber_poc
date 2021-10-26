@@ -1,0 +1,9 @@
+<h1>Callnumber browse proof of concept</h1>
+
+<div style="justify-content: center">
+  <%= form_with url: "/callnumber/first", method: :get do |form| %>
+    <%= form.label :query, "Browse starting at:" %>
+    <%= form.text_field :callnumber, value: params[:callnumber] %>
+    <%= form.submit "Go" %>
+  <% end %>
+</div>

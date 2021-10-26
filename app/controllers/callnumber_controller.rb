@@ -5,6 +5,11 @@ $:.unshift '../../lib'
 require 'callnumber_models'
 
 class CallnumberController < ApplicationController
+
+  def index
+
+  end
+
   def first
     callnumber = params[:callnumber]
     @base_cnrq = CallnumberRangeQuery.new(callnumber: callnumber)

@@ -1,4 +1,6 @@
 Rails.application.routes.draw do
+  get '/', to: redirect('callnumber')
+  get 'callnumber/', to: 'callnumber#index'
   get 'callnumber/next'
   get 'callnumber/previous'
   get 'callnumber/first'
