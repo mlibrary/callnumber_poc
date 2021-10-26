@@ -45,6 +45,10 @@ the regular indexing process, but it'd be a little messy (probably have to
 build a special writer and call it from an `each_record` block in the 
 traject code). 
 
+The query is then done against the side core, and the bib_ids returned are 
+used to gather actual records from the catalog solr (with just a `bib_id: 
+1 OR 2 OR 3 OR ...`). 
+
 ## What's in the URL?
 
 * `callnumber` is the original search callnumber. It's used to populate 
