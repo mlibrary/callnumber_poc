@@ -1,0 +1,34 @@
+<h1>Callnumber browse proof of concept</h1>
+
+
+<%=  %>
+<div style="display: flex; width: 100%; margin-top: 100px;
+  justify-content: space-between;">
+  <div style="width: 20%"><%= link_to "Previous page", callnumber_previous_path(@crnq.previous_page.url_args) %></div>
+    <div style="width: 20%"><%= link_to "Next page", callnumber_next_path(@crnq.next_page.url_args) %></div>
+</div>
+
+<div style="justify-content: center">
+  <%= form_with url: "first", method: :get do |form| %>
+    <%= form.label :query, "Browse starting at:" %>
+    <%= form.text_field :callnumber %>
+    <%= form.submit "Go" %>
+  <% end %>
+</div>
+
+<% @crnq.docs.each do |d| %>
+  <div style="margin-top: 2em;">
+    <% if d == :placeholder %>
+      <div style="margin: 1em; color: red">Your results would have been here</div>
+      <% next %>
+    <% end %>
+
+    <% if d.exact_match %>
+      <div style="color: red">EXACT MATCH</div>
+    <% end %>
+    <div><span style="font-weight: bold">Callnumber</span>: <span style="color: forestgreen"><%= d['lc_callnumber'].join(", ") %></span></div>
+    <div><span style="font-weight: bold">ID</span>: <%= d['id'] %></div>
+    <div><span style="font-weight: bold">Title</span>: <%= d['title'].first %></div>
+
+  </div>
+<% end %>
