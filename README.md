@@ -71,6 +71,9 @@ used to gather actual records from the catalog solr (with just a `bib_id:
 
 * Refactoring. Lots of it. Everything is currently stuck in one big file 
   with a bunch of classes in it (`lib/callnumber_models.rb`)
+* It should probably notice when two items on the same page are actually 
+  the same record. I have no idea if that's happening or not, but it'd 
+  look weird. 
 * The script that creates the side-core is dumb as a thumb, and doesn't 
   even deal with solr errors correctly. It could benefit from perhaps 
   parallelization, and certainly from using a traject-like writer that 
