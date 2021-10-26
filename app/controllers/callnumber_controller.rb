@@ -18,7 +18,7 @@ class CallnumberController < ApplicationController
     key        = params[:key]
 
     if page == 0
-      redirect_to(action: :first)
+      redirect_to(action: :first, params: {callnumber: callnumber})
     else
       c     = CallnumberRangeQuery.new(callnumber: callnumber, key: key, page: page)
       @crnq = c.clone_to(NextPage)
@@ -32,7 +32,7 @@ class CallnumberController < ApplicationController
     page       = params[:page].to_i
     key        = params[:key]
     if page == 0
-      redirect_to(action: :first)
+      redirect_to(action: :first, params: {callnumber: callnumber})
     else
       c          = CallnumberRangeQuery.new(callnumber: callnumber, key: key, page: page)
     @crnq      = c.clone_to(PreviousPage)

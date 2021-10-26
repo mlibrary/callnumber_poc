@@ -1,20 +1,30 @@
 <h1>Callnumber browse proof of concept</h1>
 
-
-<%=  %>
-<div style="display: flex; width: 100%; margin-top: 100px;
-  justify-content: space-between;">
-  <div style="width: 20%"><%= link_to "Previous page", callnumber_previous_path(@crnq.previous_page.url_args) %></div>
-    <div style="width: 20%"><%= link_to "Next page", callnumber_next_path(@crnq.next_page.url_args) %></div>
-</div>
-
 <div style="justify-content: center">
   <%= form_with url: "first", method: :get do |form| %>
     <%= form.label :query, "Browse starting at:" %>
-    <%= form.text_field :callnumber %>
+    <%= form.text_field :callnumber, value: params[:callnumber] %>
     <%= form.submit "Go" %>
   <% end %>
 </div>
+
+
+<div style="display: flex; width: 100%; margin-top: 100px;
+  justify-content: space-between;">
+
+  <div style="width: 20%">
+    <% if @crnq.has_previous_page? %>
+      <%= link_to "Previous page", callnumber_previous_path(@crnq.previous_page.url_args) %>
+    <% end %>
+  </div>
+  <div style="width: 20%">
+    <% if @crnq.has_next_page? %>
+      <%= link_to "Next page", callnumber_next_path(@crnq.next_page.url_args) %>
+    <% end %>
+  </div>
+</div>
+
+
 
 <% @crnq.docs.each do |d| %>
   <div style="margin-top: 2em;">
@@ -26,9 +36,25 @@
     <% if d.exact_match %>
       <div style="color: red">EXACT MATCH</div>
     <% end %>
-    <div><span style="font-weight: bold">Callnumber</span>: <span style="color: forestgreen"><%= d['lc_callnumber'].join(", ") %></span></div>
-    <div><span style="font-weight: bold">ID</span>: <%= d['id'] %></div>
-    <div><span style="font-weight: bold">Title</span>: <%= d['title'].first %></div>
+    <div><span style="font-weight: bold">Title</span>: <%= link_to d['title'].first, "https://search.lib.umich.edu/catalog/record/#{d['id']}" %></div>
+    <div><span style="font-weight: bold">Callnumber</span>:
+      <span style="color: forestgreen"><%= d.this_callnumber %></span></div>
+
 
   </div>
 <% end %>
+
+<div style="display: flex; width: 100%; margin-top: 100px;
+  justify-content: space-between;">
+
+  <div style="width: 20%">
+    <% if @crnq.has_previous_page? %>
+      <%= link_to "Previous page", callnumber_previous_path(@crnq.previous_page.url_args) %>
+    <% end %>
+  </div>
+  <div style="width: 20%">
+    <% if @crnq.has_next_page? %>
+      <%= link_to "Next page", callnumber_next_path(@crnq.next_page.url_args) %>
+    <% end %>
+  </div>
+</div>

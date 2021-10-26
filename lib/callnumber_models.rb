@@ -6,14 +6,19 @@ require 'delegate'
 
 class SolrDocWrapper < SimpleDelegator
 
-  attr_accessor :exact_match
+  attr_accessor :exact_match, :this_callnumber, :cn_key
+
   def initialize(solrdoc, exact_match: false)
     @solrdoc = solrdoc
     __setobj__ @solrdoc
     @exact_match = exact_match
   end
-end
 
+  def id
+    @solrdoc['id']
+  end
+
+end
 
 class CallnumberRangeQuery
 
@@ -21,9 +26,10 @@ class CallnumberRangeQuery
   CN_CORE      = SSC.core('callnumbers')
   CATALOG_CORE = SSC.core('biblio')
 
-
   attr_reader :callnumber, :cn_core, :catalog_core, :rows
   attr_accessor :query, :filters, :results, :key, :page
+
+  attr_accessor :first_page, :last_page
 
   def initialize(callnumber:,
                  key: nil,
@@ -32,7 +38,7 @@ class CallnumberRangeQuery
                  catalog_core: CATALOG_CORE,
                  query: '*:*',
                  filters: [],
-                 rows: 30)
+                 rows: 5)
     @callnumber   = callnumber
     @page         = page
     @cn_core      = cn_core
@@ -91,10 +97,45 @@ class CallnumberRangeQuery
     @cn_key_query ||= CNKeyQuery.new(cn_core, query_args)
   end
 
+  def cn_by_bib_id
+    @bib_id_map = cn_key_query.docs.each_with_object(Hash.new) do |cnd, h|
+      h[cnd['bib_id']] = cnd
+    end
+  end
+
+  def next_page_key
+    docs.last.cn_key
+  end
+
+  def previous_page_key
+    docs.first.cn_key
+  end
+
+  # placeholders
+
+  def has_next_page?
+    true
+  end
+
+  def has_previous_page?
+    true
+  end
+
+  def decorate_catalog_docs(docs)
+    swdocs = docs.map { |d| SolrDocWrapper.new(d) }
+    swdocs.each do |sw|
+      bib_id             = sw.id
+      sw.this_callnumber = cn_by_bib_id[bib_id]['callnumber']
+      sw.cn_key          = cn_by_bib_id[bib_id]['id']
+    end
+  end
+
   def catalog_docs_from_ids
     return [] if bib_ids.empty?
-    q                    = 'id:(' + bib_ids.join(" OR ") + ')'
-    @catalog_docs_by_ids ||= catalog_core.get('select', q: q, rows: bib_ids.size)['response']['docs']
+    @catalog_docs_by_ids ||= begin
+                               q = 'id:(' + bib_ids.join(" OR ") + ')'
+                               decorate_catalog_docs(catalog_core.get('select', q: q, rows: bib_ids.size)['response']['docs'])
+                             end
   end
 
   def reorder_docs(documents)
@@ -109,11 +150,10 @@ class CallnumberRangeQuery
                      puts "Can't find doc for #{bib_id}" unless d
                      d
                    end
-                 end.map{|x| SolrDocWrapper.new(x)}
-    reorder_docs(@results)
+                 end
+    reorder_docs(@results).take(rows)
   end
 end
-
 
 class NextPage < CallnumberRangeQuery
 
@@ -127,10 +167,18 @@ class NextPage < CallnumberRangeQuery
 
   def url_args
     {
-      page: page,
+      page:       page,
       callnumber: callnumber,
-      key: key
+      key:        key
     }
+  end
+
+  def has_next_page?
+    !cn_key_query.hit_an_edge?
+  end
+
+  def has_previous_page?
+    true
   end
 
   def sort
@@ -141,32 +189,16 @@ class NextPage < CallnumberRangeQuery
     %Q(id:{"#{key}" TO *])
   end
 
-  def next_page_key
-    cn_key_query.last_key
-  end
-
-  def previous_page_key
-    cn_key_query.first_key
-  end
-
 end
 
 class FirstPage < NextPage
 
-  def previous_two_results
+  def leading_results
     @ppc ||= clone_to(PreviousPage, key: callnumber, rows: 2)
   end
 
   def exact_matches
     @epc ||= clone_to(ExactPage, key: callnumber)
-  end
-
-  def next_page_key
-    next_results.next_page_key
-  end
-
-  def previous_page_key
-    previous_two_results.previous_page_key
   end
 
   def next_results
@@ -182,8 +214,16 @@ class FirstPage < NextPage
     @npc ||= clone_to(NextPage, key: newkey, rows: rows_needed)
   end
 
+  def has_next_page?
+    !next_results.cn_key_query.hit_an_edge?
+  end
+
+  def has_previous_page?
+    !leading_results.cn_key_query.hit_an_edge?
+  end
+
   def docs
-    d = previous_two_results.docs
+    d = leading_results.docs
     e = exact_matches.docs
     if e.empty?
       e = [:placeholder]
@@ -194,10 +234,17 @@ class FirstPage < NextPage
 
 end
 
-
 class PreviousPage < NextPage
   def sort
     "id desc"
+  end
+
+  def has_next_page?
+    true
+  end
+
+  def has_previous_page?
+    !cn_key_query.hit_an_edge?
   end
 
   def range
@@ -210,39 +257,58 @@ class PreviousPage < NextPage
 
 end
 
-
 class ExactPage < NextPage
 
   # Not really a range in this case...
   def range
-    r= %Q(callnumber:"#{callnumber}")
+    r = %Q(callnumber:"#{callnumber}")
     puts r
     r
   end
 
   def docs
     d = super
-    d.each {|sd| sd.exact_match = true}
+    d.each { |sd| sd.exact_match = true }
   end
 end
 
 class CNKeyQuery
 
-  attr_reader :cn_core, :resp, :query_args
+  attr_reader :cn_core, :resp, :query_args, :hit_an_edge
 
   def initialize(cn_core, query_args)
-    @cn_core    = cn_core
-    @query_args = query_args
+    @cn_core       = cn_core
+    @query_args    = query_args
+    @no_more_pages = false
   end
 
   def docs
-    @docs ||= get_docs
+    @docs ||= get_docs.take(rows)
+  end
+
+  def rows
+    query_args[:rows]
+  end
+
+  def rows_plus_one_to_check_for_edge
+    query_args[:rows] + 1
+  end
+
+  def hit_an_edge?
+    get_docs
+    @hit_an_edge
+  end
+
+  def query_args_with_one_more_row
+    query_args.merge({ rows: rows_plus_one_to_check_for_edge })
   end
 
   def get_docs
     puts "CNKeyQuery args are " + query_args.to_s
-    @resp = cn_core.get('select', query_args)
-    @resp['response']['docs']
+    @resp        ||= cn_core.get('select', query_args_with_one_more_row)
+    d            = @resp['response']['docs']
+    @hit_an_edge = (d.size <= rows)
+    d
   end
 
   def first_key
