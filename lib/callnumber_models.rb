@@ -26,6 +26,9 @@ class CallnumberRangeQuery
   CN_CORE      = SSC.core('callnumbers')
   CATALOG_CORE = SSC.core('biblio')
 
+
+  ROWS = 30
+
   attr_reader :callnumber, :cn_core, :catalog_core, :rows
   attr_accessor :query, :filters, :results, :key, :page
 
@@ -38,7 +41,7 @@ class CallnumberRangeQuery
                  catalog_core: CATALOG_CORE,
                  query: '*:*',
                  filters: [],
-                 rows: 5)
+                 rows: ROWS)
     @callnumber   = callnumber
     @page         = page
     @cn_core      = cn_core
